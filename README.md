@@ -69,8 +69,9 @@ scripts/upload-images-to-r2.js copy images folder -> R2 (re-runnable)
 
 ## Cutover (about 5 minutes)
 
-1. Re-run `npm run migrate:mongo` and `npm run migrate:images -- <folder>` to copy
-   anything added since step 4.
+1. Re-copy everything so edits, deletes and rotations since step 4 are included:
+   `npm run migrate:mongo -- --fresh` and `npm run migrate:images -- <folder>`.
+   Do not make changes in the admin panel between this step and step 2.
 2. In `/etc/nginx/sites-available/api.amoxford.com.conf` change
    `proxy_pass http://localhost:8080;` to `http://localhost:8081;`, then
    `nginx -t && systemctl reload nginx`.

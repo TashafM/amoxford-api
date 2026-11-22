@@ -1,8 +1,9 @@
 // Copy all data from the old MongoDB into PostgreSQL, keeping ids and timestamps.
-// Safe to re-run: existing rows are skipped (ON CONFLICT DO NOTHING), so a second run
-// right before cutover copies only what was added since the first run.
+// Safe to re-run: existing rows are skipped (ON CONFLICT DO NOTHING).
+// --fresh empties the tables first, so edits, deletes and rotations made on the old
+// server since the last run are copied too. Use it at cutover, before the new API takes writes.
 //
-// Usage: MONGO_URI=... DATABASE_URL=... node scripts/migrate-from-mongo.js
+// Usage: node scripts/migrate-from-mongo.js [--fresh]
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
 const { pool } = require("../src/db");
@@ -47,6 +48,11 @@ const updated = (d) => d.updatedAt || created(d);
   const mongo = await MongoClient.connect(process.env.MONGO_URI);
   const db = mongo.db(); // database named in MONGO_URI
   let problems = 0;
+
+  if (process.argv.includes("--fresh")) {
+    await pool.query("TRUNCATE users, notices, enquiries, images, categories");
+    console.log("--fresh: emptied all tables");
+  }
 
   for (const step of PLAN) {
     const docs = await db.collection(step.from).find().toArray();
