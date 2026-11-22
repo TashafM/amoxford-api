@@ -38,6 +38,12 @@ const port = process.env.PORT || 8081;
 pool.query("SELECT 1")
   .then(() => {
     app.listen(port, () => console.log(`API on port ${port}, database connected`));
+
+    // Keep-alive: Supabase free tier pauses a project after 7 days without activity.
+    // A real table read every 12 hours keeps it active even if nobody visits the site.
+    setInterval(() => {
+      pool.query("SELECT count(*) FROM notices").catch((e) => console.error("Keep-alive failed:", e.message));
+    }, 12 * 60 * 60 * 1000);
   })
   .catch((err) => {
     console.error("Cannot connect to PostgreSQL:", err.message);

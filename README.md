@@ -37,8 +37,8 @@ scripts/upload-images-to-r2.js copy images folder -> R2 (re-runnable)
   public Data API (anon key) cannot read any table. This server connects as the table
   owner and is not affected. Do not add policies unless you mean to expose data.
 - **Free tier limits:** 500 MB database (this data is well under 1 MB), and a project is
-  **paused after 7 days without activity**. The website queries the database on every
-  visit, so a live site stays active.
+  **paused after 7 days without activity**. The server reads a table every 12 hours
+  (keep-alive in `src/server.js`), and the website queries the database on every visit.
 - **Backups:** the free tier has no downloadable backups. Optional: a weekly `pg_dump` from
   the VPS (`apt install postgresql-client`, client only, no server).
 
