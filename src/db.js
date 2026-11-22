@@ -1,7 +1,21 @@
 const crypto = require("crypto");
+const fs = require("fs");
 const { Pool } = require("pg");
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const url = process.env.DATABASE_URL || "";
+const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+
+// Supabase requires SSL. With DATABASE_CA (Supabase dashboard > Database > SSL certificate)
+// the server certificate is verified; without it the connection is encrypted but not verified.
+// ponytail: unverified TLS fallback; set DATABASE_CA to close it.
+const ssl = isLocal
+  ? false
+  : process.env.DATABASE_CA
+    ? { ca: fs.readFileSync(process.env.DATABASE_CA, "utf8") }
+    : { rejectUnauthorized: false };
+
+// Small pool: Supabase free tier limits connections through its pooler.
+const pool = new Pool({ connectionString: url, ssl, max: 5 });
 
 const query = (text, params) => pool.query(text, params);
 

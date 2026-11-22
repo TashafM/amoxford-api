@@ -1,11 +1,11 @@
-# A.M. Oxford API (PostgreSQL + Cloudflare R2)
+# A.M. Oxford API (Supabase PostgreSQL + Cloudflare R2)
 
 Replacement for `amoxfordschoolserver` (MongoDB + images on disk). **Same endpoints and
 same JSON responses**, so the admin panel and website need no changes.
 
 | | Old server | This project |
 | --- | --- | --- |
-| Database | MongoDB | PostgreSQL |
+| Database | MongoDB on the VPS | PostgreSQL on Supabase (free tier) |
 | Images | `public/Images` on the VPS | Cloudflare R2 bucket on a custom domain |
 | Port on VPS | 8080 | 8081 |
 | pm2 name | `server` | `amoxford-api` |
@@ -16,33 +16,43 @@ links and URLs keep working. Old image URLs (`/Images/...`) redirect (301) to R2
 ## Layout
 
 ```
-db/schema.sql                 tables (safe to re-run)
-src/server.js                 app setup
-src/db.js                     pg pool, id generator, row -> API JSON shapes
-src/storage.js                R2 upload/delete, sharp resize + thumbnail
-src/auth.js                   admin JWT check, async error wrapper
-src/guard.js                  enquiry validation + per-IP rate limit (npm test = self-check)
-src/routes/*.js               auth, notices, enquiries, images, categories, dashboard
-scripts/migrate-from-mongo.js copy MongoDB -> PostgreSQL (re-runnable)
+db/schema.sql                  tables + RLS (safe to re-run)
+src/server.js                  app setup
+src/db.js                      pg pool (SSL for Supabase), id generator, row -> API JSON shapes
+src/storage.js                 R2 upload/delete, sharp resize + thumbnail
+src/auth.js                    admin JWT check, async error wrapper
+src/guard.js                   enquiry validation + per-IP rate limit (npm test = self-check)
+src/routes/*.js                auth, notices, enquiries, images, categories, dashboard
+scripts/apply-schema.js        npm run db:schema: create tables in DATABASE_URL
+scripts/migrate-from-mongo.js  copy MongoDB -> PostgreSQL (re-runnable)
 scripts/upload-images-to-r2.js copy images folder -> R2 (re-runnable)
 ```
 
-## One-time setup on the VPS
+## Supabase notes
 
-1. **PostgreSQL**
-   ```
-   apt install -y postgresql
-   sudo -u postgres psql -c "CREATE USER amoxford WITH PASSWORD '<strong password>';"
-   sudo -u postgres psql -c "CREATE DATABASE amoxford OWNER amoxford;"
-   psql "postgres://amoxford:<password>@localhost:5432/amoxford" -f db/schema.sql
-   ```
+- **Connection string:** use the **Session pooler** (port 5432) from Project Settings >
+  Database. The direct host is IPv6-only on the free tier and the VPS connects over IPv4.
+- **Region:** pick the one closest to the VPS (every query crosses the network).
+- **RLS:** `db/schema.sql` turns on Row Level Security with no policies, so Supabase's
+  public Data API (anon key) cannot read any table. This server connects as the table
+  owner and is not affected. Do not add policies unless you mean to expose data.
+- **Free tier limits:** 500 MB database (this data is well under 1 MB), and a project is
+  **paused after 7 days without activity**. The website queries the database on every
+  visit, so a live site stays active.
+- **Backups:** the free tier has no downloadable backups. Optional: a weekly `pg_dump` from
+  the VPS (`apt install postgresql-client`, client only, no server).
+
+## One-time setup
+
+1. **Supabase:** create a project, copy the Session pooler connection string.
 2. **Cloudflare R2:** create bucket `amoxford-images`, connect custom domain
    `images.amoxford.com`, create an API token with Object Read & Write on that bucket only.
-3. **App**
+3. **App on the VPS**
    ```
    git clone <repo> /root/amoxford-api && cd /root/amoxford-api
    npm ci
    cp .env.example .env   # fill in; copy SECRET_KEY, MAIL_* from the old server's .env
+   npm run db:schema      # creates tables in Supabase, prints RLS status
    ```
 4. **Copy data and images** (both safe to re-run)
    ```

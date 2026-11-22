@@ -2,12 +2,13 @@
   "name": "amoxford-api",
   "version": "2.0.0",
   "private": true,
-  "description": "A.M. Oxford school API: Node.js + PostgreSQL + Cloudflare R2. Same endpoints as the old MongoDB server.",
+  "description": "A.M. Oxford school API: Node.js + PostgreSQL (Supabase) + Cloudflare R2. Same endpoints as the old MongoDB server.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node src/guard.js",
+    "db:schema": "node scripts/apply-schema.js",
     "migrate:mongo": "node scripts/migrate-from-mongo.js",
     "migrate:images": "node scripts/upload-images-to-r2.js"
   },

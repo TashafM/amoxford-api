@@ -51,3 +51,12 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 CREATE INDEX IF NOT EXISTS categories_section_idx ON categories (section);
 CREATE INDEX IF NOT EXISTS categories_slug_idx ON categories (slug);
+
+-- Supabase exposes tables in "public" through its Data API (anon key). Row Level Security
+-- with no policies blocks that API completely. This server connects as the database owner,
+-- which bypasses RLS, so the app is unaffected.
+ALTER TABLE users      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notices    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enquiries  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE images     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
