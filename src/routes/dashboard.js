@@ -22,7 +22,7 @@ router.get("/get-dashboard", requireAdmin, h(async (req, res) => {
       FROM images i
       LEFT JOIN (SELECT DISTINCT ON (slug) slug, section, name FROM categories ORDER BY slug, id) c
         ON c.slug = i.category
-      ORDER BY i."timestamp" DESC LIMIT 8`),
+      ORDER BY i."timestamp" DESC, i.id DESC LIMIT 8`),
   ]);
 
   res.json({

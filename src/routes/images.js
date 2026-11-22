@@ -43,7 +43,7 @@ router.post("/get-images", h(async (req, res) => {
 
   const [list, count] = await Promise.all([
     query(
-      `SELECT * FROM images ${where} ORDER BY "timestamp" DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
+      `SELECT * FROM images ${where} ORDER BY "timestamp" DESC, id DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
       params
     ),
     query(`SELECT count(*)::int AS n FROM images ${where}`, params),

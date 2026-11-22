@@ -37,7 +37,7 @@ router.get("/api/v1/get-queries", requireAdmin, h(async (req, res) => {
 
   const [list, count] = await Promise.all([
     query(
-      `SELECT * FROM enquiries ${where} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
+      `SELECT * FROM enquiries ${where} ORDER BY created_at DESC, id DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
       params
     ),
     query(`SELECT count(*)::int AS n FROM enquiries ${where}`, params),
