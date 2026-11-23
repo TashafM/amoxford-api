@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const { query } = require("../db");
 const { h } = require("../auth");
 const { isRateLimited, clientIp } = require("../rateLimit");
+const { resetPasswordEmail } = require("../emails/resetPassword");
 
 const mailer = nodemailer.createTransport({
   service: "gmail",
@@ -65,11 +66,17 @@ router.post("/forgot-password", h(async (req, res) => {
 
   const token = jwt.sign({ id: user.id }, resetSecret(user), { expiresIn: "1h" });
   try {
+    const email = resetPasswordEmail({
+      name: user.firstname,
+      resetUrl: `${process.env.ADMIN_URL}/reset-password/${user.id}/${token}`,
+      expiresInMinutes: 60,
+    });
     await mailer.sendMail({
-      from: process.env.MAIL_USER,
+      from: { name: "A.M. OXFORD Admin", address: process.env.MAIL_USER },
       to: user.email,
-      subject: "Reset your password - A.M. OXFORD Admin",
-      text: `${process.env.ADMIN_URL}/reset-password/${user.id}/${token}`,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
     });
   } catch (error) {
     console.error("Reset email failed:", error);
