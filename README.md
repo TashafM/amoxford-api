@@ -19,7 +19,7 @@ links and URLs keep working. Old image URLs (`/Images/...`) redirect (301) to R2
 
 ```
 api/index.js                   Vercel entry: exports the Express app
-vercel.json                    rewrite everything to api/index.js, 60 s limit, daily cron
+vercel.json                    Mumbai region (next to Supabase), rewrite to api/index.js, 60 s, daily cron
 src/app.js                     Express app, /health
 src/server.js                  local dev server (npm run dev)
 src/db.js                      pg pool (SSL for Supabase), id generator, row -> API JSON shapes
