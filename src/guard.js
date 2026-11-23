@@ -1,4 +1,4 @@
-// Validation + simple rate limit for the public enquiry form (/send-query).
+// Validation for the public enquiry form (/send-query). Rate limiting is in rateLimit.js.
 
 // Letters in any script (so Hindi names work), spaces, dot, apostrophe, hyphen.
 const NAME_RE = /^\p{L}[\p{L}\p{M} .'-]*$/u;
@@ -33,24 +33,9 @@ function validateEnquiry(body = {}) {
   return { data: { name: cleanName, phone_number: digits, message: cleanMessage } };
 }
 
-// ponytail: in-memory per-IP limit, fine for one pm2 process. Use Redis if the API ever runs on several.
-const WINDOW_MS = 10 * 60 * 1000;
-const MAX_PER_WINDOW = 5;
-const hits = new Map(); // ip -> [timestamps]
+module.exports = { validateEnquiry };
 
-function isRateLimited(ip, now = Date.now()) {
-  const recent = (hits.get(ip) || []).filter((t) => now - t < WINDOW_MS);
-  recent.push(now);
-  hits.set(ip, recent);
-  if (hits.size > 10000) {
-    for (const [k, v] of hits) if (now - v[v.length - 1] >= WINDOW_MS) hits.delete(k);
-  }
-  return recent.length > MAX_PER_WINDOW;
-}
-
-module.exports = { validateEnquiry, isRateLimited };
-
-// Self-check: node utils/enquiryGuard.js
+// Self-check: node src/guard.js
 if (require.main === module) {
   const assert = require("assert");
   const ok = (b) => assert.ok(validateEnquiry(b).data, JSON.stringify(b));
@@ -77,9 +62,5 @@ if (require.main === module) {
   bad({ ...base, message: "hi" });
   bad({});
 
-  for (let i = 0; i < 5; i++) assert.ok(!isRateLimited("1.1.1.1", 1000 + i));
-  assert.ok(isRateLimited("1.1.1.1", 2000));
-  assert.ok(!isRateLimited("2.2.2.2", 2000));
-  assert.ok(!isRateLimited("1.1.1.1", 2000 + WINDOW_MS + 10));
   console.log("enquiryGuard ok");
 }

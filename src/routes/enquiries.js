@@ -1,7 +1,8 @@
 const router = require("express").Router();
 const { query, newId, shape } = require("../db");
 const { h, requireAdmin } = require("../auth");
-const { validateEnquiry, isRateLimited } = require("../guard");
+const { validateEnquiry } = require("../guard");
+const { isRateLimited, clientIp } = require("../rateLimit");
 
 // Public contact form on the website.
 router.post("/api/v1/send-query", h(async (req, res) => {
@@ -9,7 +10,7 @@ router.post("/api/v1/send-query", h(async (req, res) => {
   if (req.body?.website) {
     return res.json({ success: true, message: "Message sent successfully!" });
   }
-  if (isRateLimited(req.ip)) {
+  if (await isRateLimited(`enquiry:${clientIp(req)}`)) {
     return res.status(429).json({ success: false, message: "Too many messages. Please try again after some time." });
   }
   const { data, error } = validateEnquiry(req.body);

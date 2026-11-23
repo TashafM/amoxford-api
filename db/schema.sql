@@ -60,3 +60,12 @@ ALTER TABLE notices    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enquiries  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE images     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+
+-- Per-key rate limits (login, forgot password, enquiry form). Stored here because
+-- serverless instances do not share memory. Old rows are removed by the daily cron.
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key           text PRIMARY KEY,
+  hits          integer NOT NULL,
+  window_start  timestamptz NOT NULL
+);
+ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;

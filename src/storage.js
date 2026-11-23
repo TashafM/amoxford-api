@@ -1,9 +1,11 @@
 // Cloudflare R2 (S3-compatible) image storage.
-// Layout: <filename> = full image, thumbs/<filename> = 400x300 grid preview.
+// Layout: <filename> = full image, thumbs/<filename> = 400x300 grid preview,
+//         uploads/<id>/<name> = raw browser uploads waiting to be processed.
 const sharp = require("sharp");
 const {
   S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectsCommand,
 } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const bucket = process.env.R2_BUCKET;
 const r2 = new S3Client({
@@ -62,4 +64,16 @@ async function saveImage(filename, { full, thumb }) {
 
 const deleteImage = (filename) => remove([filename, thumbKey(filename)]);
 
-module.exports = { r2, bucket, put, get, publicUrl, processImage, saveImage, deleteImage };
+// Signed link the browser uses to PUT one file straight to R2 (Vercel caps request bodies
+// at 4.5 MB, phone photos are bigger). Content-Type and exact size are part of the
+// signature, so the browser cannot upload a different type or a larger file with it.
+const presignUpload = (key, contentType, size) =>
+  getSignedUrl(
+    r2,
+    new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType, ContentLength: size }),
+    { expiresIn: 600, signableHeaders: new Set(["content-type", "content-length"]) }
+  );
+
+module.exports = {
+  r2, bucket, put, get, remove, publicUrl, processImage, saveImage, deleteImage, presignUpload,
+};

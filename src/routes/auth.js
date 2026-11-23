@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const { query } = require("../db");
 const { h } = require("../auth");
-const { isRateLimited } = require("../guard");
+const { isRateLimited, clientIp } = require("../rateLimit");
 
 const mailer = nodemailer.createTransport({
   service: "gmail",
@@ -16,7 +16,7 @@ const resetSecret = (user) => process.env.RESET_SECRET + user.password;
 
 // Admin panel login. Only role "admin"; a `role` sent by the client is ignored.
 router.post("/api/v1/login", h(async (req, res) => {
-  if (isRateLimited(`login:${req.ip}`)) {
+  if (await isRateLimited(`login:${clientIp(req)}`)) {
     return res.status(429).json({
       success: false, message: "Too many login attempts. Please try again in 10 minutes.",
     });
@@ -52,7 +52,7 @@ router.post("/forgot-password", h(async (req, res) => {
     success: true,
     message: "If this email is registered, a reset link has been sent. Check your inbox.",
   });
-  if (isRateLimited(`forgot:${req.ip}`)) {
+  if (await isRateLimited(`forgot:${clientIp(req)}`)) {
     return res.status(429).json({ success: false, message: "Too many requests. Please try again in 10 minutes." });
   }
   const { email } = req.body || {};

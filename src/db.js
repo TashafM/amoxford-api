@@ -14,8 +14,9 @@ const ssl = isLocal
     ? { ca: fs.readFileSync(process.env.DATABASE_CA, "utf8") }
     : { rejectUnauthorized: false };
 
-// Small pool: Supabase free tier limits connections through its pooler.
-const pool = new Pool({ connectionString: url, ssl, max: 5 });
+// Small pool: Supabase free tier limits connections through its pooler. On Vercel every
+// instance has its own pool, so set DB_POOL_MAX=1 there and use the transaction pooler (6543).
+const pool = new Pool({ connectionString: url, ssl, max: Number(process.env.DB_POOL_MAX) || 5 });
 
 const query = (text, params) => pool.query(text, params);
 
