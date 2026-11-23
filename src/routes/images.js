@@ -21,7 +21,12 @@ const makeFilename = (baseName) =>
   `file_${Date.now()}_${Math.floor(10000000 + Math.random() * 90000000)}_${baseName}.webp`;
 
 // Old image URLs (/Images/<file>, /Images/thumbs/<file>) now live on R2.
-router.get("/Images/*", (req, res) => res.redirect(301, storage.publicUrl(req.params[0])));
+// Filenames never change, so the redirect is cached for a year by browsers and by
+// Vercel's CDN (s-maxage): repeat requests do not start the function at all.
+router.get("/Images/*", (req, res) => {
+  res.set("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable");
+  res.redirect(301, storage.publicUrl(req.params[0]));
+});
 
 router.post("/upload", requireAdmin, upload.array("files"), h(async (req, res) => {
   const { category } = req.body;
