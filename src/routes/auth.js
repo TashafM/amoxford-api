@@ -85,22 +85,34 @@ router.post("/forgot-password", h(async (req, res) => {
   sent();
 }));
 
+// The user a reset link belongs to, or null if the link is wrong, expired, or already used
+// (using it changes the password hash, which is part of the signing secret).
+async function userForResetLink(id, token) {
+  const { rows } = await query("SELECT * FROM users WHERE id = $1", [id]);
+  const user = rows[0];
+  if (!user) return null;
+  try {
+    const decoded = jwt.verify(token, resetSecret(user));
+    return String(decoded.id) === user.id ? user : null;
+  } catch {
+    return null;
+  }
+}
+const invalidLink = (res) => res.status(400).json({ success: false, message: "Invalid or expired link" });
+
+// Lets the reset page show "link expired" as soon as it opens, before the form is filled in.
+router.get("/reset-password/:id/:token", h(async (req, res) => {
+  if (!(await userForResetLink(req.params.id, req.params.token))) return invalidLink(res);
+  res.json({ success: true, valid: true });
+}));
+
 router.post("/reset-password/:id/:token", h(async (req, res) => {
-  const invalid = () => res.status(400).json({ success: false, message: "Invalid or expired link" });
   const { password } = req.body || {};
   if (typeof password !== "string" || password.length < 8 || password.length > 128) {
     return res.status(400).json({ success: false, message: "Password must be at least 8 characters" });
   }
-  const { rows } = await query("SELECT * FROM users WHERE id = $1", [req.params.id]);
-  const user = rows[0];
-  if (!user) return invalid();
-  try {
-    // Throws if signature is wrong, token expired, or the password already changed.
-    const decoded = jwt.verify(req.params.token, resetSecret(user));
-    if (String(decoded.id) !== user.id) return invalid();
-  } catch {
-    return invalid();
-  }
+  const user = await userForResetLink(req.params.id, req.params.token);
+  if (!user) return invalidLink(res);
   await query("UPDATE users SET password = $1, updated_at = now() WHERE id = $2", [
     await bcrypt.hash(password, 10),
     user.id,
